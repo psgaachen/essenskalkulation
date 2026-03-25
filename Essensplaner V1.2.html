@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Küchen-Chef Planer v16 - Komplett-Paket</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <style>
+        :root { --accent: #d35400; --bg: #f4f7f6; --success: #27ae60; --excel: #1d6f42; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; padding: 20px; background: var(--bg); color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .no-print { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 5px solid var(--accent); margin-bottom: 20px; }
+        
+        /* Korrigierte Filter-Bar mit allen Feldern */
+        .filter-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; background: #fff5eb; padding: 20px; border-radius: 8px; border: 1px solid #fab1a0; margin-bottom: 20px; }
+        .search-group { grid-column: 1 / -1; }
+        .search-input { width: 100%; padding: 12px; border: 2px solid var(--accent); border-radius: 6px; box-sizing: border-box; font-size: 1em; }
+        .filter-group { display: flex; flex-direction: column; gap: 5px; }
+        .filter-group label { font-size: 0.85em; font-weight: bold; color: #a04000; }
+
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th { background: #f2f2f2; padding: 12px; text-align: left; position: sticky; top: 0; z-index: 10; }
+        td { padding: 10px; border-bottom: 1px solid #eee; }
+        
+        .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .btn { padding: 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; font-size: 1.1em; }
+        .btn-pdf { background: var(--success); }
+        .btn-excel { background: var(--excel); }
+
+        .qr-wrapper { margin-top: 15px; padding: 10px; border: 1px solid #eee; border-radius: 8px; background: #fff; text-align: center; width: 120px; }
+        .qr-code-div { width: 100px; height: 100px; margin: 0 auto; }
+
+        @media print {
+            @page { size: A4; margin: 1.2cm; }
+            .no-print { display: none !important; }
+            #outputArea { display: block !important; }
+            .recipe-page, .shopping-page { page-break-after: always; break-after: page; }
+            .recipe-content { display: flex; gap: 25px; }
+            .ing-box { width: 32%; background: #fdf2e9 !important; padding: 15px; border-radius: 8px; border: 1px solid #fab1a0; -webkit-print-color-adjust: exact; }
+            .step-box { width: 68%; line-height: 1.5; }
+            h2 { color: var(--accent); border-bottom: 3px solid var(--accent); margin-top: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="no-print">
+        <h1>👩‍🍳 Küchen-Chef Planer v16</h1>
+        <div class="drop-zone" onclick="document.getElementById('csvIn').click()" style="border: 2px dashed #ccc; padding: 20px; text-align: center; cursor: pointer; border-radius: 8px;">
+            <strong>Datenbank laden</strong>
+            <input type="file" id="csvIn" hidden accept=".csv">
+        </div>
+
+        <div id="ui" style="display:none;">
+            <div class="filter-bar">
+                <div class="search-group">
+                    <input type="text" id="searchInput" class="search-input" placeholder="🔍 Rezept suchen (z.B. Nudeln, Curry...)" oninput="renderSelectionTable()">
+                </div>
+                <div class="filter-group">
+                    <label>Personen:</label>
+                    <input type="number" id="globalGuestCount" value="12" min="1" oninput="updateAll()">
+                </div>
+                <div class="filter-group">
+                    <label>Kategorie:</label>
+                    <select id="filterCategory" onchange="renderSelectionTable()">
+                        <option value="alle">Alle</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Kosten-Level:</label>
+                    <select id="filterCost" onchange="renderSelectionTable()">
+                        <option value="alle">Alle</option>
+                        <option value="günstig">Günstig</option>
+                        <option value="mittel">Mittel</option>
+                        <option value="gehoben">Gehoben</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Aufwand:</label>
+                    <select id="filterEffort" onchange="renderSelectionTable()">
+                        <option value="alle">Alle</option>
+                        <option value="simpel">Simpel</option>
+                        <option value="aufwendig">Aufwendig</option>
+                    </select>
+                </div>
+            </div>
+
+            <table>
+                <thead><tr><th width="40">Wahl</th><th>Rezeptname</th><th>Kategorie</th><th>Info</th></tr></thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+
+            <div class="btn-group">
+                <button class="btn btn-pdf" onclick="window.print()">🖨️ PDF & QR-Codes</button>
+                <button class="btn btn-excel" onclick="exportToXLSX()">📊 Excel Export</button>
+            </div>
+        </div>
+    </div>
+    <div id="outputArea"></div>
+</div>
+
+<script>
+    let db = [];
+    let currentTotals = {};
+
+    document.getElementById('csvIn').onchange = (e) => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = (ev) => { parseCSV(ev.target.result); };
+        reader.readAsText(file, 'UTF-8');
+    };
+
+    function parseCSV(text) {
+        const rows = text.split(/\r?\n/);
+        db = [];
+        const cats = new Set();
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row.trim()) continue;
+            const cols = row.match(/(".*?"|[^;]+)(?=\s*;|\s*$)/g) || [];
+            if (cols.length < 3) continue;
+
+            let content = cols[2].replace(/"/g, '').trim()
+                .replace(/Ã–/g, 'Ö').replace(/Ã¤/g, 'ä').replace(/Ã¼/g, 'ü').replace(/ÃŸ/g, 'ß')
+                .replace(/Â½|½/g, '0.5').replace(/¼/g, '0.25').replace(/¾/g, '0.75');
+
+            if (!content.includes("Zutaten:")) continue;
+
+            const category = (content.match(/Kategorie:\s*([^\s\r\n\t]+)/) || ["","Sonstiges"])[1].trim();
+            const rawCost = (content.match(/Aufwand\/Kosten:\s*([^\s\r\n\t]+)/) || ["","k.A."])[1].toLowerCase();
+            
+            // Gruppierung für Filter
+            const costGroup = rawCost.includes('günstig') ? 'günstig' : (rawCost.includes('mittel') ? 'mittel' : 'gehoben');
+            const effortGroup = rawCost.includes('simpel') ? 'simpel' : 'aufwendig';
+
+            const baseP = parseInt((content.match(/Personenzahl:\s*(\d+)/) || [0,10])[1]);
+            const sStart = content.indexOf("Zubereitung");
+            let steps = content.substring(sStart + 11).split("[ ©")[0].split("$(document).ready")[0].trim();
+
+            const ings = [];
+            content.substring(content.indexOf("Zutaten:") + 8, sStart).split(/\s{2,}/).forEach(line => {
+                const m = line.trim().match(/^([\d\s\/\.0-9,]+(?:bis|ca|etwa)?[\d\s\/\.0-9,]*)?\s?([a-zA-Zäöüß\.]+)?\s(.*)$/i);
+                if (m) {
+                    let cleanQty = parseFloat((m[1] || "0").toLowerCase().split('bis')[0].split('ca')[0].replace(',', '.'));
+                    ings.push({ 
+                        qty: isNaN(cleanQty) ? 0 : cleanQty, 
+                        unit: (m[2] || "").toLowerCase(), 
+                        name: (m[3] || line.trim()).trim().replace(/^bis\s+/i, '')
+                    });
+                }
+            });
+
+            db.push({ name: cols[0].replace(/"/g, '').trim(), link: cols[1].replace(/"/g, '').trim(), category, costGroup, effortGroup, rawCost, baseP, ingredients: ings, steps });
+            cats.add(category);
+        }
+        const sel = document.getElementById('filterCategory');
+        Array.from(cats).sort().forEach(c => sel.innerHTML += `<option value="${c}">${c}</option>`);
+        document.getElementById('ui').style.display = 'block';
+        renderSelectionTable();
+    }
+
+    function renderSelectionTable() {
+        const s = document.getElementById('searchInput').value.toLowerCase();
+        const fCat = document.getElementById('filterCategory').value;
+        const fCost = document.getElementById('filterCost').value;
+        const fEff = document.getElementById('filterEffort').value;
+        const tb = document.getElementById('tableBody');
+        tb.innerHTML = '';
+        
+        db.forEach((r, idx) => {
+            const matchS = r.name.toLowerCase().includes(s);
+            const matchC = (fCat === 'alle' || r.category === fCat);
+            const matchCo = (fCost === 'alle' || r.costGroup === fCost);
+            const matchE = (fEff === 'alle' || r.effortGroup === fEff);
+
+            if (matchS && matchC && matchCo && matchE) {
+                tb.innerHTML += `<tr><td><input type="checkbox" class="recipe-cb" data-idx="${idx}" onchange="updateAll()"></td><td><b>${r.name}</b></td><td><small>${r.category}</small></td><td><small>${r.rawCost}</small></td></tr>`;
+            }
+        });
+    }
+
+    function updateAll() {
+        const target = parseInt(document.getElementById('globalGuestCount').value) || 12;
+        const out = document.getElementById('outputArea');
+        const sel = Array.from(document.querySelectorAll('.recipe-cb:checked')).map(cb => db[cb.dataset.idx]);
+        out.innerHTML = ''; currentTotals = {};
+
+        if (sel.length === 0) return;
+
+        sel.forEach(r => {
+            const factor = target / r.baseP;
+            r.ingredients.forEach(ing => {
+                // Name normalisieren (Plural -n/-en am Ende entfernen für bessere Summierung)
+                let normName = ing.name.toLowerCase().replace(/n$|en$/, '');
+                const key = `${normName}|${ing.unit}`;
+                if (!currentTotals[key]) currentTotals[key] = { name: ing.name, unit: ing.unit, amount: 0 };
+                currentTotals[key].amount += (ing.qty * factor);
+            });
+        });
+
+        let shopHtml = `<div class="shopping-page"><h1>🛒 Einkaufsliste (${target} Pers.)</h1><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">`;
+        Object.values(currentTotals).sort((a,b)=>a.name.localeCompare(b.name)).forEach(i => {
+            shopHtml += `<div style="border-bottom:1px dotted #ccc; padding:3px;">${i.name}: <b>${i.amount>0?i.amount.toLocaleString('de-DE',{maximumFractionDigits:1}):''} ${i.unit}</b></div>`;
+        });
+        out.innerHTML += shopHtml + `</div></div>`;
+
+        sel.forEach((r, i) => {
+            const factor = target / r.baseP;
+            const qrId = `qr-code-box-${i}`;
+            out.innerHTML += `
+                <div class="recipe-page">
+                    <h2>🍽️ ${r.name}</h2>
+                    <div class="recipe-content">
+                        <div class="ing-box">
+                            <h3>Zutaten</h3>
+                            ${r.ingredients.map(ing=>`• ${(ing.qty*factor).toLocaleString('de-DE',{maximumFractionDigits:1})} ${ing.unit} ${ing.name}`).join('<br>')}
+                            <div class="qr-wrapper"><div id="${qrId}" class="qr-code-div"></div><div style="font-size:9px;margin-top:5px;">Original Rezept</div></div>
+                        </div>
+                        <div class="step-box"><h3>Zubereitung</h3><p>${r.steps.replace(/\s{2,}/g, '<br><br>')}</p></div>
+                    </div>
+                </div>`;
+            setTimeout(() => {
+                const container = document.getElementById(qrId);
+                if(container) {
+                    container.innerHTML = "";
+                    new QRCode(container, { text: r.link, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.M });
+                }
+            }, 50);
+        });
+    }
+
+    function exportToXLSX() {
+        const target = document.getElementById('globalGuestCount').value;
+        const data = [["Zutat", "Menge", "Einheit"]];
+        Object.values(currentTotals).sort((a,b)=>a.name.localeCompare(b.name)).forEach(i => data.push([i.name, i.amount > 0 ? Number(i.amount.toFixed(2)) : "", i.unit]));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), "Einkaufsliste");
+        XLSX.writeFile(wb, `Einkauf_${target}_Pers.xlsx`);
+    }
+</script>
+</body>
+</html>
