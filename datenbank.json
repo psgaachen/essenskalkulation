@@ -1,5 +1,5 @@
 [
- ,{ 
+ { 
   "name": "Risotto mit Spinat, Feta und getrockneten Tomaten", 
   "category": "Mittagessen", 
   "rawCost": "simpel/mittel", 
@@ -58,7 +58,7 @@
     } 
   ], 
   "steps": "1. Zwiebel und Knoblauch schälen und hacken.\n2. Mit Butter in einem großen Topf anschwitzen und anschließend den Reis dazugeben.\n3. Brühe und Sahne in den Topf geben, salzen und ca. 15 Minuten köcheln lassen. Gelegentlich umrühren, damit der Reis nicht anbrennt.\n4. Spinat waschen und getrocknete Tomaten in Streifen schneiden.\n5. Spinat und Tomaten in den Topf geben und den Feta darauf bröseln. Alles gut miteinander vermengen."
-} 
+}, 
 
   {
     "name": "Kräuter Frischkäse",
