@@ -2,46 +2,59 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <title>Küchen-Chef Planer v19 - JSON Engine</title>
+    <title>Küchen-Chef Pro v23 - PSG Aachen</title>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        :root { --accent: #d35400; --bg: #f4f7f6; --success: #27ae60; --excel: #1d6f42; --dark: #2c3e50; }
+        :root { --accent: #d35400; --bg: #f4f7f6; --success: #27ae60; --excel: #1d6f42; --dark: #2c3e50; --border: #ddd; }
         body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; padding: 20px; background: var(--bg); color: #333; }
         .container { max-width: 1200px; margin: 0 auto; }
-        .no-print { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 5px solid var(--accent); margin-bottom: 20px; }
         
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-        .tab-btn { padding: 12px 25px; cursor: pointer; border: none; background: #ddd; border-radius: 6px; font-weight: bold; transition: 0.3s; }
-        .tab-btn.active { background: var(--accent); color: white; }
+        .header-box { display: flex; justify-content: space-between; align-items: center; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; border-top: 5px solid var(--accent); }
+        .status-pill { padding: 5px 12px; border-radius: 20px; font-size: 0.85em; font-weight: bold; background: #eee; }
+        .dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; margin-right: 5px; }
 
-        .filter-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; background: #fff5eb; padding: 20px; border-radius: 8px; border: 1px solid #fab1a0; margin-bottom: 20px; }
-        .search-input { width: 100%; padding: 12px; border: 2px solid var(--accent); border-radius: 6px; box-sizing: border-box; font-size: 1em; }
+        .action-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 10px; flex-wrap: wrap; }
+        .button-group { display: flex; gap: 10px; }
+        
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: white; font-size: 0.95em; transition: 0.3s; display: flex; align-items: center; gap: 8px; }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-tab { background: #ddd; color: #333; }
+        .btn-print { background: var(--success); }
+        .btn-excel { background: var(--excel); }
+        .btn-back { background: var(--dark); }
 
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background: #f9f9f9; padding: 25px; border-radius: 8px; border: 1px solid #ddd; }
-        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        .no-print { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        
+        .filter-bar { display: flex; flex-wrap: wrap; gap: 15px; background: #fff5eb; padding: 20px; border-radius: 8px; border: 1px solid #fab1a0; margin-bottom: 20px; align-items: flex-end; }
+        .filter-item-search { flex: 2; min-width: 250px; }
+        .filter-item-small { flex: 1; min-width: 120px; }
+        
+        label { font-weight: bold; font-size: 0.85em; display: block; margin-bottom: 5px; color: var(--dark); }
+        .search-input, select, input[type="number"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 1em; box-sizing: border-box; }
+
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
+        th { background: #f8f9fa; padding: 15px; text-align: left; border-bottom: 2px solid var(--border); position: sticky; top: 0; z-index: 10; }
+        td { padding: 12px 15px; border-bottom: 1px solid #eee; }
+
+        /* Formular & Export Area */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; background: #f9f9f9; padding: 25px; border-radius: 8px; border: 1px solid var(--border); }
         .full-width { grid-column: 1 / -1; }
-        label { font-weight: bold; color: var(--dark); }
-        .req::after { content: " *"; color: #e74c3c; }
-        input, select, textarea { padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 1em; }
-        textarea { height: 120px; font-family: inherit; }
-
-        table { width: 100%; border-collapse: collapse; background: white; margin-top: 10px; }
-        th { background: #f2f2f2; padding: 12px; text-align: left; position: sticky; top: 0; z-index: 10; }
-        td { padding: 12px; border-bottom: 1px solid #eee; }
-
-        .btn { padding: 15px 25px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; font-size: 1em; }
-        #dbStatus { font-size: 0.9em; font-weight: bold; }
-        .dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        textarea { height: 120px; font-family: inherit; padding: 10px; border-radius: 6px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; }
+        
+        .export-box { background: #e8f4fd; border: 2px dashed #3498db; padding: 20px; border-radius: 12px; margin-top: 20px; }
+        #jsonOutput { background: #2c3e50; color: #ecf0f1; font-family: monospace; font-size: 0.85em; height: 150px; }
 
         @media print {
-            .no-print, .tabs { display: none !important; }
+            .no-print, .action-bar { display: none !important; }
             #outputArea { display: block !important; }
             .recipe-page, .shopping-page { page-break-after: always; break-after: page; }
-            .recipe-content { display: flex; gap: 25px; }
-            .ing-box { width: 32%; background: #fdf2e9 !important; padding: 15px; border-radius: 8px; border: 1px solid #fab1a0; -webkit-print-color-adjust: exact; }
-            .step-box { width: 68%; line-height: 1.6; }
-            .qr-wrapper { margin-top: 20px; text-align: center; border: 1px solid #eee; padding: 10px; background: white; }
+            .recipe-header { border-bottom: 3px solid var(--accent); margin-bottom: 20px; }
+            .recipe-content { display: flex; gap: 30px; }
+            .ing-box { width: 35%; background: #fdf2e9 !important; padding: 20px; border-radius: 10px; border: 1px solid #fab1a0; -webkit-print-color-adjust: exact; }
+            .step-box { width: 65%; line-height: 1.6; }
+            .qr-wrapper { margin-top: 30px; text-align: center; }
+            .shopping-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         }
         .hidden { display: none; }
     </style>
@@ -49,55 +62,102 @@
 <body>
 
 <div class="container">
-    <div class="no-print">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <h1>👩‍🍳 Küchen-Chef Planer v19</h1>
-            <div id="dbStatus"><span class="dot" style="background:#bbb"></span> JSON wird geladen...</div>
+    <div class="header-box no-print">
+        <div>
+            <h1 style="margin:0; color:var(--dark);">👩‍🍳 Küchen-Chef Pro <span style="color:var(--accent)">v23</span></h1>
+            <p style="margin:5px 0 0 0; font-size:0.9em; color:#666;">PSG Aachen | Rezept-Zentrale</p>
         </div>
+        <div id="dbStatus" class="status-pill"><span class="dot" style="background:#bbb"></span> Verbinde...</div>
+    </div>
 
-        <div class="tabs">
-            <button class="tab-btn active" onclick="showTab('planer')">🗓️ Menü Planer</button>
-            <button class="tab-btn" onclick="showTab('editor')">➕ Neues Rezept</button>
+    <div class="action-bar no-print">
+        <div class="button-group">
+            <button id="btn-add" class="btn btn-tab" style="background:var(--accent); color:white" onclick="showTab('editor')">➕ Rezept einreichen</button>
+            <button id="btn-back" class="btn btn-back hidden" onclick="showTab('planer')">⬅️ Zurück zur Liste</button>
         </div>
-
-        <div id="tab-planer">
-            <div class="filter-bar">
-                <div style="grid-column: 1/-1;"><input type="text" id="searchInput" class="search-input" placeholder="🔍 Suche Rezept, Zutat oder Kategorie..." oninput="renderTable()"></div>
-                <div class="filter-group"><label>Gäste:</label><input type="number" id="globalGuestCount" value="12" min="1" oninput="updateAll()"></div>
-                <div class="filter-group"><label>Kategorie:</label><select id="filterCat" onchange="renderTable()"><option value="alle">Alle</option></select></div>
-            </div>
-            <table>
-                <thead><tr><th width="40">Wahl</th><th>Rezeptname</th><th>Kategorie</th><th>Aufwand/Kosten</th></tr></thead>
-                <tbody id="tableBody"></tbody>
-            </table>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top:25px;">
-                <button class="btn" style="background:var(--success)" onclick="window.print()">🖨️ Drucken / PDF</button>
-                <button class="btn" style="background:var(--excel)" onclick="exportToXLSX()">📊 Excel Liste</button>
-            </div>
-        </div>
-
-        <div id="tab-editor" class="hidden">
-            <h2 style="margin-top:0">Rezept hinzufügen</h2>
-            <form id="recipeForm" onsubmit="saveNewRecipe(event)">
-                <div class="form-grid">
-                    <div class="form-group full-width"><label class="req">Rezeptname</label><input type="text" id="n_name" required></div>
-                    <div class="form-group"><label class="req">Kategorie</label><select id="n_cat" required><option value="Frühstück">Frühstück</option><option value="Mittagessen">Mittagessen</option><option value="Abendessen">Abendessen</option><option value="Dessert">Dessert</option><option value="Salat">Salat</option></select></div>
-                    <div class="form-group"><label class="req">Aufwand & Kosten</label><select id="n_cost" required><option value="simpel/günstig">simpel/günstig</option><option value="simpel/mittel">simpel/mittel</option><option value="aufwendig/mittel">aufwendig/mittel</option><option value="aufwendig/gehoben">aufwendig/gehoben</option></select></div>
-                    <div class="form-group"><label class="req">Personen Basis</label><input type="number" id="n_base" value="10" required></div>
-                    <div class="form-group"><label>Web-Link</label><input type="url" id="n_link"></div>
-                    <div class="form-group full-width"><label class="req">Zutaten (Menge Einheit Name)</label><textarea id="n_ings" required placeholder="500 g Mehl"></textarea></div>
-                    <div class="form-group full-width"><label class="req">Zubereitung</label><textarea id="n_steps" required></textarea></div>
-                </div>
-                <button type="submit" class="btn" style="background:var(--dark); width:100%; margin-top:20px;">✅ Lokal speichern</button>
-            </form>
+        <div id="global-actions" class="button-group">
+            <button class="btn btn-print" onclick="window.print()">🖨️ Druckansicht</button>
+            <button class="btn btn-excel" onclick="exportToXLSX()">📊 Excel-Export</button>
         </div>
     </div>
+
+    <div id="tab-planer" class="no-print">
+        <div class="filter-bar">
+            <div class="filter-item-search">
+                <label>Suche Rezept oder Zutat</label>
+                <input type="text" id="searchInput" class="search-input" placeholder="🔍 Tippen zum Filtern..." oninput="renderTable()">
+            </div>
+            <div class="filter-item-small">
+                <label>Gästezahl</label>
+                <input type="number" id="globalGuestCount" value="12" min="1" oninput="updateAll()">
+            </div>
+            <div class="filter-item-small">
+                <label>Kategorie</label>
+                <select id="filterCat" onchange="renderTable()"><option value="alle">Alle</option></select>
+            </div>
+        </div>
+        <table>
+            <thead><tr><th width="50">Wahl</th><th>Rezeptname</th><th>Kategorie</th><th>Aufwand</th></tr></thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+
+    <div id="tab-editor" class="hidden no-print">
+        <div id="editor-form-container">
+            <h2 style="margin-top:0">Neues Rezept vorschlagen</h2>
+            <p style="font-size:0.9em; color:#666">Fülle das Formular aus, um den Code für die Datenbank zu generieren.</p>
+            <form id="recipeForm" onsubmit="generateJson(event)">
+                <div class="form-grid">
+                    <div class="form-group full-width"><label>Name des Gerichts *</label><input type="text" id="n_name" required></div>
+                    <div class="form-group">
+                        <label>Kategorie *</label>
+                        <select id="n_cat" required>
+                            <option value="Frühstück">Frühstück</option>
+                            <option value="Mittagessen">Mittagessen</option>
+                            <option value="Abendessen">Abendessen</option>
+                            <option value="Snack">Snack</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Aufwand & Kosten *</label>
+                        <select id="n_cost" required>
+                            <option value="simpel/günstig">simpel/günstig</option>
+                            <option value="simpel/mittel">simpel/mittel</option>
+                            <option value="aufwendig/mittel">aufwendig/mittel</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Basis-Personenzahl *</label><input type="number" id="n_base" value="10" required></div>
+                    <div class="form-group"><label>Web-Link</label><input type="url" id="n_link" placeholder="https://..."></div>
+                    <div class="form-group full-width">
+                        <label>Zutaten (Menge Einheit Name - pro Zeile) *</label>
+                        <textarea id="n_ings" required placeholder="500 g Mehl"></textarea>
+                    </div>
+                    <div class="form-group full-width"><label>Zubereitungsschritte *</label><textarea id="n_steps" required></textarea></div>
+                </div>
+                <button type="submit" class="btn" style="background:var(--accent); width:100%; margin-top:20px; justify-content:center;">🚀 JSON-Code generieren</button>
+            </form>
+        </div>
+
+        <div id="export-container" class="hidden">
+            <div class="export-box">
+                <h3 style="margin-top:0; color:#2980b9;">✅ Rezept-Code erstellt!</h3>
+                <p>Fast geschafft! Damit das Rezept für alle erscheint, schicke diesen Code bitte per Mail an das PSG Büro:</p>
+                <textarea id="jsonOutput" readonly></textarea>
+                <div style="margin-top:15px; display:flex; gap:10px;">
+                    <button class="btn" style="background:#3498db" onclick="copyToClipboard()">📋 Code kopieren</button>
+                    <button id="mailBtn" class="btn" style="background:var(--success)">✉️ E-Mail schicken</button>
+                </div>
+                <button class="btn" style="background:#7f8c8d; margin-top:20px;" onclick="resetEditor()">🔄 Weiteres Rezept hinzufügen</button>
+            </div>
+        </div>
+    </div>
+
     <div id="outputArea"></div>
 </div>
 
 <script>
-    // --- KONFIGURATION ---
-    const JSON_URL =https://raw.githubusercontent.com/psgaachen/essenskalkulation/refs/heads/main/datenbank.json; 
+    const JSON_URL = 'https://raw.githubusercontent.com/psgaachen/essenskalkulation/refs/heads/main/datenbank.json'; 
+    const ADMIN_EMAIL = "info@psg-aachen.de"; // HIER DEINE MAIL EINTRAGEN
 
     let db = [];
     let categories = new Set();
@@ -106,12 +166,10 @@
         const status = document.getElementById('dbStatus');
         try {
             const resp = await fetch(JSON_URL);
-            if(!resp.ok) throw new Error();
-            const cloudData = await resp.json();
-            db = cloudData;
-            status.innerHTML = '<span class="dot" style="background:var(--success)"></span> GitHub JSON bereit';
+            db = await resp.json();
+            status.innerHTML = `<span class="dot" style="background:var(--success)"></span> ${db.length} Rezepte geladen`;
         } catch(e) {
-            status.innerHTML = '<span class="dot" style="background:red"></span> Offline / JSON fehlt';
+            status.innerHTML = `<span class="dot" style="background:red"></span> Offline`;
         }
         loadLocals();
         initFilters();
@@ -126,7 +184,72 @@
 
     function initFilters() {
         const sel = document.getElementById('filterCat');
-        Array.from(categories).sort().forEach(c => sel.innerHTML += `<option value="${c}">${c}</option>`);
+        Array.from(categories).sort().forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c; opt.innerText = c;
+            sel.appendChild(opt);
+        });
+    }
+
+    function showTab(t) {
+        document.getElementById('tab-planer').classList.toggle('hidden', t!=='planer');
+        document.getElementById('tab-editor').classList.toggle('hidden', t!=='editor');
+        document.getElementById('btn-add').classList.toggle('hidden', t==='editor');
+        document.getElementById('btn-back').classList.toggle('hidden', t!=='editor');
+        document.getElementById('global-actions').classList.toggle('hidden', t==='editor');
+        if(t === 'planer') resetEditor();
+    }
+
+    function generateJson(e) {
+        e.preventDefault();
+        const ingLines = document.getElementById('n_ings').value.split('\n');
+        const parsedIngs = ingLines.map(l => {
+            const m = l.trim().match(/^([\d\.,]+)?\s?([a-zA-Zäöüß\.]+)?\s(.*)$/);
+            return m ? { qty: parseFloat(m[1]?.replace(',','.')||0), unit: m[2]||"", name: m[3] } : null;
+        }).filter(i => i);
+
+        const nr = { 
+            name: document.getElementById('n_name').value, 
+            category: document.getElementById('n_cat').value, 
+            rawCost: document.getElementById('n_cost').value, 
+            baseP: parseInt(document.getElementById('n_base').value), 
+            link: document.getElementById('n_link').value || "Nicht vorhanden", 
+            ingredients: parsedIngs, 
+            steps: document.getElementById('n_steps').value 
+        };
+
+        const jsonStr = "," + JSON.stringify(nr, null, 2);
+        document.getElementById('jsonOutput').value = jsonStr;
+        
+        // Mail-Link generieren
+        const subject = encodeURIComponent("Neues Rezept: " + nr.name);
+        const body = encodeURIComponent("Liebes Büro-Team,\n\nhier ist der Code für ein neues Rezept. Einfach auf Github in die JSON einfügen. Wenn du nicht weißt was das heißt, Peter fragen.\n\n" + jsonStr);
+        document.getElementById('mailBtn').onclick = () => {
+            window.location.href = `mailto:${ADMIN_EMAIL}?subject=${subject}&body=${body}`;
+        };
+
+        document.getElementById('editor-form-container').classList.add('hidden');
+        document.getElementById('export-container').classList.remove('hidden');
+        
+        // Auch lokal speichern für sofortige Vorschau
+        const saved = JSON.parse(localStorage.getItem('user_recipes') || "[]");
+        saved.push(nr);
+        localStorage.setItem('user_recipes', JSON.stringify(saved));
+        db.push(nr);
+        renderTable();
+    }
+
+    function copyToClipboard() {
+        const copyText = document.getElementById("jsonOutput");
+        copyText.select();
+        document.execCommand("copy");
+        alert("Code wurde kopiert!");
+    }
+
+    function resetEditor() {
+        document.getElementById('recipeForm').reset();
+        document.getElementById('editor-form-container').classList.remove('hidden');
+        document.getElementById('export-container').classList.add('hidden');
     }
 
     function renderTable() {
@@ -135,8 +258,10 @@
         const tb = document.getElementById('tableBody');
         tb.innerHTML = '';
         db.forEach((r, idx) => {
-            if (r.name.toLowerCase().includes(s) && (f === 'alle' || r.category === f)) {
-                tb.innerHTML += `<tr><td><input type="checkbox" class="recipe-cb" data-idx="${idx}" onchange="updateAll()"></td><td><b>${r.name}</b></td><td><small>${r.category}</small></td><td><small>${r.rawCost}</small></td></tr>`;
+            if ((r.name.toLowerCase().includes(s) || r.ingredients.some(i => i.name.toLowerCase().includes(s))) && (f === 'alle' || r.category === f)) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td><input type="checkbox" class="recipe-cb" data-idx="${idx}" onchange="updateAll()"></td><td><strong>${r.name}</strong></td><td>${r.category}</td><td><small>${r.rawCost}</small></td>`;
+                tb.appendChild(tr);
             }
         });
     }
@@ -151,68 +276,34 @@
         let totals = {};
         sel.forEach(r => {
             const f = target / r.baseP;
-            r.ingredients.forEach(ing => {
-                const k = `${ing.name.toLowerCase().trim()}|${ing.unit.toLowerCase().trim()}`;
-                if (!totals[k]) totals[k] = { name: ing.name, unit: ing.unit, amount: 0 };
-                totals[k].amount += (ing.qty * f);
+            r.ingredients.forEach(i => {
+                const k = `${i.name.toLowerCase().trim()}|${i.unit.toLowerCase().trim()}`;
+                if (!totals[k]) totals[k] = { n: i.name, u: i.unit, a: 0 };
+                totals[k].a += (i.qty * f);
             });
         });
 
-        let shop = `<div class="shopping-page"><h1>🛒 Einkaufsliste (${target} Pers.)</h1><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">`;
-        Object.values(totals).sort((a,b)=>a.name.localeCompare(b.name)).forEach(i => {
-            shop += `<div style="border-bottom:1px dotted #ccc; padding:3px;">${i.name}: <b>${i.amount>0?i.amount.toLocaleString('de-DE',{maximumFractionDigits:1}):''} ${i.unit}</b></div>`;
-        });
-        out.innerHTML += shop + `</div></div>`;
+        let h = `<div class="shopping-page"><h1>🛒 Einkaufsliste (${target} Pers.)</h1><div class="shopping-grid">`;
+        Object.values(totals).sort((a,b)=>a.n.localeCompare(b.n)).forEach(i => h += `<div class="shop-item">${i.n}: <b>${i.a > 0 ? i.a.toLocaleString('de-DE',{maximumFractionDigits:1}) : ''} ${i.u}</b></div>`);
+        out.innerHTML += h + `</div></div>`;
 
         sel.forEach((r, i) => {
             const f = target / r.baseP;
-            const qid = `qr-${i}`;
-            out.innerHTML += `<div class="recipe-page"><h2>🍽️ ${r.name}</h2><div class="recipe-content"><div class="ing-box"><h3>Zutaten</h3>${r.ingredients.map(ing=>`• ${(ing.qty*f).toLocaleString('de-DE',{maximumFractionDigits:1})} ${ing.unit} ${ing.name}`).join('<br>')}<div class="qr-wrapper"><div id="${qid}" style="width:100px;height:100px;margin:0 auto;"></div></div></div><div class="step-box"><h3>Zubereitung</h3><p>${r.steps.replace(/\n/g, '<br>')}</p></div></div></div>`;
-            setTimeout(() => { new QRCode(document.getElementById(qid), { text: r.link, width: 100, height: 100 }); }, 50);
+            const q = `qr-${i}`;
+            out.innerHTML += `<div class="recipe-page"><div class="recipe-header"><h2>🍽️ ${r.name}</h2><small>${target} Pers.</small></div><div class="recipe-content"><div class="ing-box"><h3>Zutaten</h3>${r.ingredients.map(ing => `• <b>${(ing.qty * f).toLocaleString('de-DE',{maximumFractionDigits:1})} ${ing.unit}</b> ${ing.name}`).join('<br>')}<div class="qr-wrapper"><div id="${q}"></div></div></div><div class="step-box"><h3>Zubereitung</h3><p>${r.steps.replace(/\n/g, '<br>')}</p></div></div></div>`;
+            setTimeout(() => { new QRCode(document.getElementById(q), { text: r.link, width: 90, height: 90 }); }, 50);
         });
-    }
-
-    function saveNewRecipe(e) {
-        e.preventDefault();
-        const ingLines = document.getElementById('n_ings').value.split('\n');
-        const parsedIngs = ingLines.map(l => {
-            const m = l.trim().match(/^([\d\.,]+)?\s?([a-zA-Zäöüß\.]+)?\s(.*)$/);
-            return m ? { qty: parseFloat(m[1]?.replace(',','.')||0), unit: m[2]||"", name: m[3] } : null;
-        }).filter(i => i);
-
-        const nr = { name: document.getElementById('n_name').value, category: document.getElementById('n_cat').value, rawCost: document.getElementById('n_cost').value, baseP: parseInt(document.getElementById('n_base').value), link: document.getElementById('n_link').value || "https://google.de", ingredients: parsedIngs, steps: document.getElementById('n_steps').value };
-        const saved = JSON.parse(localStorage.getItem('user_recipes') || "[]");
-        saved.push(nr);
-        localStorage.setItem('user_recipes', JSON.stringify(saved));
-        db.push(nr);
-        alert("Rezept lokal gesichert!");
-        renderTable();
-        showTab('planer');
     }
 
     function exportToXLSX() {
         const target = document.getElementById('globalGuestCount').value;
-        const data = [["Zutat", "Menge", "Einheit"]];
         const sel = Array.from(document.querySelectorAll('.recipe-cb:checked')).map(cb => db[cb.dataset.idx]);
-        let totals = {};
-        sel.forEach(r => {
-            const f = target / r.baseP;
-            r.ingredients.forEach(ing => {
-                const k = `${ing.name.toLowerCase()}|${ing.unit}`;
-                if (!totals[k]) totals[k] = { name: ing.name, unit: ing.unit, amount: 0 };
-                totals[k].amount += (ing.qty * f);
-            });
-        });
-        Object.values(totals).sort((a,b)=>a.name.localeCompare(b.name)).forEach(i => data.push([i.name, i.amount.toFixed(2), i.unit]));
+        if(!sel.length) return alert("Wähle Rezepte!");
+        const data = [["MENGE", "EINHEIT", "ZUTAT", "GERICHT"]];
+        sel.forEach(r => r.ingredients.forEach(i => data.push([((i.qty * target)/r.baseP).toFixed(2), i.unit, i.name, r.name])));
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data), "Einkauf");
         XLSX.writeFile(wb, `Einkauf_${target}P.xlsx`);
-    }
-
-    function showTab(t) {
-        document.getElementById('tab-planer').classList.toggle('hidden', t!=='planer');
-        document.getElementById('tab-editor').classList.toggle('hidden', t!=='editor');
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.innerText.toLowerCase().includes(t)));
     }
 </script>
 </body>
