@@ -1,4 +1,65 @@
 [
+ ,{ 
+  "name": "Risotto mit Spinat, Feta und getrockneten Tomaten", 
+  "category": "Mittagessen", 
+  "rawCost": "simpel/mittel", 
+  "baseP": 8, 
+  "link": "Nicht vorhanden", 
+  "ingredients": [ 
+    { 
+      "qty": 320, 
+      "unit": "g", 
+      "name": "Feta" 
+    }, 
+    { 
+      "qty": 2, 
+      "unit": "Stück", 
+      "name": "Zwiebel" 
+    }, 
+    { 
+      "qty": 200, 
+      "unit": "g", 
+      "name": "Getrocknete Tomaten" 
+    }, 
+    { 
+      "qty": 640, 
+      "unit": "g", 
+      "name": "Risottoreis" 
+    }, 
+    { 
+      "qty": 240, 
+      "unit": "g", 
+      "name": "Schlagsahne" 
+    }, 
+    { 
+      "qty": 240, 
+      "unit": "g", 
+      "name": "Frischer Spiant" 
+    }, 
+    { 
+      "qty": 1, 
+      "unit": "Prise", 
+      "name": "Salz" 
+    }, 
+    { 
+      "qty": 4, 
+      "unit": "Zehen", 
+      "name": "Knoblauch" 
+    }, 
+    { 
+      "qty": 2, 
+      "unit": "l", 
+      "name": "Gemüsebrühe" 
+    }, 
+    { 
+      "qty": 48, 
+      "unit": "g", 
+      "name": "Butter" 
+    } 
+  ], 
+  "steps": "1. Zwiebel und Knoblauch schälen und hacken.\n2. Mit Butter in einem großen Topf anschwitzen und anschließend den Reis dazugeben.\n3. Brühe und Sahne in den Topf geben, salzen und ca. 15 Minuten köcheln lassen. Gelegentlich umrühren, damit der Reis nicht anbrennt.\n4. Spinat waschen und getrocknete Tomaten in Streifen schneiden.\n5. Spinat und Tomaten in den Topf geben und den Feta darauf bröseln. Alles gut miteinander vermengen."
+} 
+
   {
     "name": "Kräuter Frischkäse",
     "link": "https://www.kochenfuerviele.de/fruehstueck-ideen/Kraeuter-Frischkaese-selbst-gemacht.html",
