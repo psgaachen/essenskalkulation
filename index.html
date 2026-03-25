@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Küchen-Chef Planer v18 - GitHub Live</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root { --accent: #d35400; --bg: #f4f7f6; --success: #27ae60; --excel: #1d6f42; --dark: #2c3e50; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; padding: 20px; background: var(--bg); color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .no-print { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-top: 5px solid var(--accent); margin-bottom: 20px; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab-btn { padding: 10px 20px; cursor: pointer; border: none; background: #ddd; border-radius: 5px; font-weight: bold; }
+        .tab-btn.active { background: var(--accent); color: white; }
+        .filter-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; background: #fff5eb; padding: 20px; border-radius: 8px; border: 1px solid #fab1a0; margin-bottom: 20px; }
+        .search-input { width: 100%; padding: 12px; border: 2px solid var(--accent); border-radius: 6px; box-sizing: border-box; }
+        table { width: 100%; border-collapse: collapse; background: white; }
+        th { background: #f2f2f2; padding: 12px; text-align: left; position: sticky; top: 0; z-index: 10; }
+        td { padding: 10px; border-bottom: 1px solid #eee; }
+        .btn { padding: 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; transition: 0.3s; }
+        .status-light { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+        .status-ok { background: var(--success); }
+        .status-loading { background: orange; animation: blink 1s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+        .hidden { display: none; }
+        @media print { .no-print { display: none !important; } #outputArea { display: block !important; } .recipe-page, .shopping-page { page-break-after: always; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="no-print">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h1>👩‍🍳 Küchen-Chef Planer v18</h1>
+            <div id="dbStatus"><span class="status-light status-loading"></span> Datenbank wird geladen...</div>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('planer')">🗓️ Menü Planer</button>
+            <button class="tab-btn" onclick="showTab('editor')">➕ Neues Rezept</button>
+        </div>
+
+        <div id="tab-planer">
+            <div class="filter-bar">
+                <div style="grid-column: 1/-1;"><input type="text" id="searchInput" class="search-input" placeholder="🔍 Rezept suchen..." oninput="renderTable()"></div>
+                <div class="filter-group"><label>Gäste:</label><input type="number" id="globalGuestCount" value="12" min="1" oninput="updateAll()"></div>
+                <div class="filter-group"><label>Kategorie:</label><select id="filterCat" onchange="renderTable()"><option value="alle">Alle</option></select></div>
+            </div>
+            <table>
+                <thead><tr><th width="40">Wahl</th><th>Rezeptname</th><th>Kategorie</th><th>Info</th></tr></thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-top:20px;">
+                <button class="btn" style="background:var(--success)" onclick="window.print()">🖨️ Drucken / PDF</button>
+                <button class="btn" style="background:var(--excel)" onclick="exportToXLSX()">📊 Excel Export</button>
+            </div>
+        </div>
+
+        <div id="tab-editor" class="hidden">
+            <h2>Eigenes Rezept hinzufügen</h2>
+            <p><small>Hinweis: Diese Rezepte werden nur lokal in deinem Browser gespeichert.</small></p>
+            <form id="recipeForm" onsubmit="saveNewRecipe(event)">
+                <button type="submit" class="btn" style="background:var(--dark); width:100%;">Speichern</button>
+            </form>
+        </div>
+    </div>
+    <div id="outputArea"></div>
+</div>
+
+<script>
+    // KONFIGURATION: Hier den Link zu deiner CSV auf GitHub einfügen!
+    // Wichtig: Es muss der "Raw"-Link sein (raw.githubusercontent.com...)
+    const CSV_URL = 'DEIN_GITHUB_RAW_LINK_ZUR_CSV_DATEI';
+
+    let db = [];
+    let categories = new Set();
+
+    window.onload = async () => {
+        await loadFromGitHub();
+        loadLocalRecipes();
+        initFilters();
+        renderTable();
+    };
+
+    async function loadFromGitHub() {
+        try {
+            const response = await fetch(CSV_URL);
+            const text = await response.text();
+            parseCSVData(text);
+            document.getElementById('dbStatus').innerHTML = '<span class="status-light status-ok"></span> GitHub DB bereit';
+        } catch (err) {
+            console.error("Fehler beim Laden von GitHub:", err);
+            document.getElementById('dbStatus').innerHTML = '❌ Fehler beim Laden (CSV fehlt?)';
+        }
+    }
+
+    function parseCSVData(text) {
+        const rows = text.split(/\r?\n/);
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row.trim()) continue;
+            const cols = row.match(/(".*?"|[^;]+)(?=\s*;|\s*$)/g) || [];
+            if (cols.length < 3) continue;
+
+            let content = cols[2].replace(/"/g, '').trim()
+                .replace(/Ã–/g, 'Ö').replace(/Ã¤/g, 'ä').replace(/Ã¼/g, 'ü').replace(/ÃŸ/g, 'ß')
+                .replace(/Â½|½/g, '0.5').replace(/¼/g, '0.25').replace(/¾/g, '0.75');
+
+            if (!content.includes("Zutaten:")) continue;
+            
+            const category = (content.match(/Kategorie:\s*([^\s\r\n\t]+)/) || ["","Sonstiges"])[1].trim();
+            const rawCost = (content.match(/Aufwand\/Kosten:\s*([^\s\r\n\t]+)/) || ["","k.A."])[1].toLowerCase();
+            const baseP = parseInt((content.match(/Personenzahl:\s*(\d+)/) || [0,10])[1]);
+            const sStart = content.indexOf("Zubereitung");
+            let steps = content.substring(sStart + 11).split("[ ©")[0].trim();
+
+            const ings = [];
+            content.substring(content.indexOf("Zutaten:") + 8, sStart).split(/\s{2,}/).forEach(line => {
+                const m = line.trim().match(/^([\d\s\/\.0-9,]+(?:bis|ca|etwa)?[\d\s\/\.0-9,]*)?\s?([a-zA-Zäöüß\.]+)?\s(.*)$/i);
+                if (m) {
+                    let cleanQty = parseFloat((m[1] || "0").toLowerCase().split('bis')[0].split('ca')[0].replace(',', '.'));
+                    ings.push({ qty: isNaN(cleanQty) ? 0 : cleanQty, unit: (m[2] || "").toLowerCase(), name: (m[3] || line.trim()).trim().replace(/^bis\s+/i, '') });
+                }
+            });
+
+            db.push({ 
+                name: cols[0].replace(/"/g, '').trim(), 
+                link: cols[1].replace(/"/g, '').trim(), 
+                category, rawCost, baseP, ingredients: ings, steps 
+            });
+            categories.add(category);
+        }
+    }
+
+    // (Restliche Funktionen wie renderTable, updateAll, exportToXLSX bleiben gleich wie in v16/17)
+    // ...
+</script>
+</body>
+</html>
